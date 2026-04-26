@@ -8,7 +8,7 @@ import os
 import sqlite3
 from datetime import datetime
 from functools import wraps
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 DATABASE = os.path.join(os.path.dirname(__file__), 'projects.db')
@@ -94,12 +94,17 @@ def index():
         'status': 'success',
         'message': 'XYZ Corp Project Management API',
         'documentation': {
+            'dashboard': '/dashboard',
             'health': '/api/health',
             'projects': '/api/projects',
             'project_tasks': '/api/projects/<project_id>/tasks',
             'tasks': '/api/tasks'
         }
     }), 200
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    return render_template('dashboard.html')
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
