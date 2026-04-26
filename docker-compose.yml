@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Flask application with Gunicorn
+  app:
+    build: .
+    container_name: xyz-corp-api
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app.py:/app/app.py
+      - ./projects.db:/app/projects.db
+      - ./logs:/app/logs
+    command: >
+      gunicorn
+      --workers 4
+      --worker-class sync
+      --bind 0.0.0.0:5000
+      --access-logfile /app/logs/access.log
+      --error-logfile /app/logs/error.log
+      --log-level info
+      app:app
+    restart: unless-stopped
+    networks:
+      - xyzapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:latest
+    container_name: xyz-corp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/nginx_config:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/nginx:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Optional: for SSL certs
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - xyzapp-network
+
+networks:
+  xyzapp-network:
+    driver: bridge
+
+volumes:
+  database:
+    driver: local
+  logs:
+    driver: local
