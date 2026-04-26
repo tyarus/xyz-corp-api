@@ -213,6 +213,31 @@ def get_project_tasks(project_id):
         'count': len(tasks)
     }), 200
 
+@app.route('/api/tasks', methods=['GET'])
+@handle_db_error
+def get_tasks():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, project_id, title, status, assigned_to, created_at FROM tasks')
+    rows = cursor.fetchall()
+    conn.close()
+    tasks = [
+        {
+            'id': row['id'],
+            'project_id': row['project_id'],
+            'title': row['title'],
+            'status': row['status'],
+            'assigned_to': row['assigned_to'],
+            'created_at': row['created_at']
+        }
+        for row in rows
+    ]
+    return jsonify({
+        'status': 'success',
+        'data': tasks,
+        'count': len(tasks)
+    }), 200
+
 @app.route('/api/tasks', methods=['POST'])
 @handle_db_error
 def create_task():
@@ -267,6 +292,35 @@ def create_task():
             'created_at': datetime.now().isoformat()
         }
     }), 201
+
+@app.route('/api/tasks/<int:task_id>', methods=['GET'])
+@handle_db_error
+def get_task(task_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, project_id, title, status, assigned_to, created_at FROM tasks WHERE id = ?',
+        (task_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({
+            'error': 'Not found',
+            'status': 404,
+            'message': f'Task with id {task_id} not found'
+        }), 404
+    return jsonify({
+        'status': 'success',
+        'data': {
+            'id': row['id'],
+            'project_id': row['project_id'],
+            'title': row['title'],
+            'status': row['status'],
+            'assigned_to': row['assigned_to'],
+            'created_at': row['created_at']
+        }
+    }), 200
 
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 @handle_db_error
