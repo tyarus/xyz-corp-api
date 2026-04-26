@@ -6,54 +6,41 @@ Flask-based REST API for project and task management
 
 import os
 import sqlite3
-import json
 from datetime import datetime
 from functools import wraps
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-DATABASE = '/home/ubuntu/xyzapp/projects.db'
+DATABASE = os.path.join(os.path.dirname(__file__), 'projects.db')
 
-# ============================================================================
-# DATABASE INITIALIZATION
-# ============================================================================
-
-def init_db():
-    """Initialize database with required tables"""
-    if not os.path.exists(os.path.dirname(DATABASE)):
-        os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
-    
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    
-    # Create projects table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create tasks table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            status TEXT NOT NULL CHECK(status IN ('todo', 'in-progress', 'done')),
-            assigned_to TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+with app.app_context():
+    def init_db():
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('todo', 'in-progress', 'done')),
+                assigned_to TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    init_db()
 
 def get_db():
-    """Get database connection"""
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
@@ -64,7 +51,6 @@ def get_db():
 
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 Not Found"""
     return jsonify({
         'error': 'Resource not found',
         'status': 404,
@@ -73,7 +59,6 @@ def not_found(error):
 
 @app.errorhandler(400)
 def bad_request(error):
-    """Handle 400 Bad Request"""
     return jsonify({
         'error': 'Bad request',
         'status': 400,
@@ -81,7 +66,6 @@ def bad_request(error):
     }), 400
 
 def handle_db_error(f):
-    """Decorator for database error handling"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
@@ -101,12 +85,11 @@ def handle_db_error(f):
     return decorated_function
 
 # ============================================================================
-# HEALTH CHECK ENDPOINT
+# HEALTH CHECK
 # ============================================================================
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'service': 'XYZ Corp Project Management API',
@@ -121,13 +104,11 @@ def health_check():
 @app.route('/api/projects', methods=['GET'])
 @handle_db_error
 def get_projects():
-    """Get all projects"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT id, name, description, created_at FROM projects')
     rows = cursor.fetchall()
     conn.close()
-    
     projects = [
         {
             'id': row['id'],
@@ -137,7 +118,6 @@ def get_projects():
         }
         for row in rows
     ]
-    
     return jsonify({
         'status': 'success',
         'data': projects,
@@ -147,24 +127,19 @@ def get_projects():
 @app.route('/api/projects', methods=['POST'])
 @handle_db_error
 def create_project():
-    """Create a new project"""
     data = request.get_json()
-    
-    # Validation
     if not data:
         return jsonify({
             'error': 'Bad request',
             'status': 400,
             'message': 'Request body must be JSON'
         }), 400
-    
     if 'name' not in data or not data['name']:
         return jsonify({
             'error': 'Bad request',
             'status': 400,
             'message': 'Project name is required'
         }), 400
-    
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -174,7 +149,6 @@ def create_project():
     conn.commit()
     project_id = cursor.lastrowid
     conn.close()
-    
     return jsonify({
         'status': 'success',
         'message': 'Project created successfully',
@@ -193,11 +167,8 @@ def create_project():
 @app.route('/api/projects/<int:project_id>/tasks', methods=['GET'])
 @handle_db_error
 def get_project_tasks(project_id):
-    """Get all tasks for a project"""
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Check if project exists
     cursor.execute('SELECT id FROM projects WHERE id = ?', (project_id,))
     if not cursor.fetchone():
         conn.close()
@@ -206,15 +177,12 @@ def get_project_tasks(project_id):
             'status': 404,
             'message': f'Project with id {project_id} not found'
         }), 404
-    
-    # Get tasks
     cursor.execute(
         'SELECT id, project_id, title, status, assigned_to, created_at FROM tasks WHERE project_id = ?',
         (project_id,)
     )
     rows = cursor.fetchall()
     conn.close()
-    
     tasks = [
         {
             'id': row['id'],
@@ -226,7 +194,6 @@ def get_project_tasks(project_id):
         }
         for row in rows
     ]
-    
     return jsonify({
         'status': 'success',
         'data': tasks,
@@ -236,17 +203,13 @@ def get_project_tasks(project_id):
 @app.route('/api/tasks', methods=['POST'])
 @handle_db_error
 def create_task():
-    """Create a new task"""
     data = request.get_json()
-    
-    # Validation
     if not data:
         return jsonify({
             'error': 'Bad request',
             'status': 400,
             'message': 'Request body must be JSON'
         }), 400
-    
     required_fields = ['project_id', 'title', 'status']
     for field in required_fields:
         if field not in data:
@@ -255,8 +218,6 @@ def create_task():
                 'status': 400,
                 'message': f'{field} is required'
             }), 400
-    
-    # Validate status
     valid_statuses = ['todo', 'in-progress', 'done']
     if data['status'] not in valid_statuses:
         return jsonify({
@@ -264,11 +225,8 @@ def create_task():
             'status': 400,
             'message': f'Status must be one of: {", ".join(valid_statuses)}'
         }), 400
-    
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Check if project exists
     cursor.execute('SELECT id FROM projects WHERE id = ?', (data['project_id'],))
     if not cursor.fetchone():
         conn.close()
@@ -277,17 +235,13 @@ def create_task():
             'status': 400,
             'message': f'Project with id {data["project_id"]} does not exist'
         }), 400
-    
-    # Create task
     cursor.execute(
-        '''INSERT INTO tasks (project_id, title, status, assigned_to) 
-           VALUES (?, ?, ?, ?)''',
+        'INSERT INTO tasks (project_id, title, status, assigned_to) VALUES (?, ?, ?, ?)',
         (data['project_id'], data['title'], data['status'], data.get('assigned_to'))
     )
     conn.commit()
     task_id = cursor.lastrowid
     conn.close()
-    
     return jsonify({
         'status': 'success',
         'message': 'Task created successfully',
@@ -304,20 +258,15 @@ def create_task():
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 @handle_db_error
 def update_task(task_id):
-    """Update a task"""
     data = request.get_json()
-    
     if not data:
         return jsonify({
             'error': 'Bad request',
             'status': 400,
             'message': 'Request body must be JSON'
         }), 400
-    
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Check if task exists
     cursor.execute('SELECT * FROM tasks WHERE id = ?', (task_id,))
     task = cursor.fetchone()
     if not task:
@@ -327,8 +276,6 @@ def update_task(task_id):
             'status': 404,
             'message': f'Task with id {task_id} not found'
         }), 404
-    
-    # Validate status if provided
     if 'status' in data:
         valid_statuses = ['todo', 'in-progress', 'done']
         if data['status'] not in valid_statuses:
@@ -338,19 +285,15 @@ def update_task(task_id):
                 'status': 400,
                 'message': f'Status must be one of: {", ".join(valid_statuses)}'
             }), 400
-    
-    # Update task
     title = data.get('title', task['title'])
     status = data.get('status', task['status'])
     assigned_to = data.get('assigned_to', task['assigned_to'])
-    
     cursor.execute(
-        '''UPDATE tasks SET title = ?, status = ?, assigned_to = ? WHERE id = ?''',
+        'UPDATE tasks SET title = ?, status = ?, assigned_to = ? WHERE id = ?',
         (title, status, assigned_to, task_id)
     )
     conn.commit()
     conn.close()
-    
     return jsonify({
         'status': 'success',
         'message': 'Task updated successfully',
@@ -367,11 +310,8 @@ def update_task(task_id):
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 @handle_db_error
 def delete_task(task_id):
-    """Delete a task"""
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Check if task exists
     cursor.execute('SELECT id FROM tasks WHERE id = ?', (task_id,))
     if not cursor.fetchone():
         conn.close()
@@ -380,12 +320,9 @@ def delete_task(task_id):
             'status': 404,
             'message': f'Task with id {task_id} not found'
         }), 404
-    
-    # Delete task
     cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
     conn.commit()
     conn.close()
-    
     return jsonify({
         'status': 'success',
         'message': 'Task deleted successfully',
@@ -400,8 +337,5 @@ def delete_task(task_id):
 # ============================================================================
 
 if __name__ == '__main__':
-    # Initialize database
-    init_db()
-    
-    # Run Flask app
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
