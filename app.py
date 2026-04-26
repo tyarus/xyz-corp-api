@@ -337,5 +337,11 @@ def delete_task(task_id):
 # ============================================================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    raw_port = os.environ.get('PORT', '5000')
+    try:
+        port = int(raw_port)
+        if not (1 <= port <= 65535):
+            port = 5000
+    except ValueError:
+        port = 5000
     app.run(host='0.0.0.0', port=port, debug=False)

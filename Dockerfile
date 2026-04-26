@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
-COPY app.py .
+COPY app.py gunicorn.conf.py ./
 
 # Create logs directory
 RUN mkdir -p /app/logs
@@ -26,14 +26,7 @@ EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
+    CMD sh -c 'curl -fsS "http://localhost:${PORT:-5000}/api/health" || exit 1'
 
 # Run application
-CMD ["gunicorn", \
-     "--workers", "4", \
-     "--worker-class", "sync", \
-     "--bind", "0.0.0.0:5000", \
-     "--access-logfile", "/app/logs/access.log", \
-     "--error-logfile", "/app/logs/error.log", \
-     "--log-level", "info", \
-     "app:app"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]

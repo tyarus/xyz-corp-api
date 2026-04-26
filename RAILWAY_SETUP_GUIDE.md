@@ -105,8 +105,10 @@ Railway akan secara otomatis:
 ```
 FLASK_ENV=production
 PYTHONUNBUFFERED=1
-PORT=5000
 ```
+
+`PORT` tidak perlu diset manual di Railway (akan diinjeksi otomatis).  
+Jika `PORT` pernah Anda isi dengan nilai seperti `$PORT`, hapus variable itu dari dashboard Railway.
 
 ### Step 3.2: Verify Deployment
 
@@ -288,7 +290,7 @@ File-file ini WAJIB ada di root directory:
 
 ✅ **Procfile** - Tells Railway how to run app
 ```
-web: gunicorn --workers 4 --bind 0.0.0.0:$PORT app:app
+web: gunicorn -c gunicorn.conf.py app:app
 ```
 
 ✅ **requirements.txt** - Python dependencies
