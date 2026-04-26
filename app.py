@@ -88,6 +88,19 @@ def handle_db_error(f):
 # HEALTH CHECK
 # ============================================================================
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'status': 'success',
+        'message': 'XYZ Corp Project Management API',
+        'documentation': {
+            'health': '/api/health',
+            'projects': '/api/projects',
+            'project_tasks': '/api/projects/<project_id>/tasks',
+            'tasks': '/api/tasks'
+        }
+    }), 200
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({
