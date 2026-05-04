@@ -6,6 +6,7 @@ Flask-based REST API for project and task management
 
 import os
 import sqlite3
+import psutil
 from datetime import datetime
 from functools import wraps
 from flask import Flask, request, jsonify, render_template
@@ -96,6 +97,7 @@ def index():
         'documentation': {
             'dashboard': '/dashboard',
             'health': '/api/health',
+            'metrics': '/api/metrics',
             'projects': '/api/projects',
             'project_tasks': '/api/projects/<project_id>/tasks',
             'tasks': '/api/tasks'
@@ -114,6 +116,44 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'database': 'operational'
     }), 200
+
+@app.route('/api/metrics', methods=['GET'])
+def get_metrics():
+    """
+    Get system metrics including CPU and memory usage.
+    This endpoint is used for monitoring the infrastructure resource utilization.
+    """
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        return jsonify({
+            'status': 'success',
+            'timestamp': datetime.now().isoformat(),
+            'cpu': {
+                'percent': cpu_percent,
+                'count': psutil.cpu_count()
+            },
+            'memory': {
+                'percent': memory.percent,
+                'used_mb': round(memory.used / (1024**2), 2),
+                'total_mb': round(memory.total / (1024**2), 2),
+                'available_mb': round(memory.available / (1024**2), 2)
+            },
+            'disk': {
+                'percent': disk.percent,
+                'used_gb': round(disk.used / (1024**3), 2),
+                'total_gb': round(disk.total / (1024**3), 2),
+                'free_gb': round(disk.free / (1024**3), 2)
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to retrieve metrics',
+            'error': str(e)
+        }), 500
 
 # ============================================================================
 # PROJECTS ENDPOINTS
