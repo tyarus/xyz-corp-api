@@ -12,9 +12,9 @@ from datetime import datetime
 from functools import wraps
 from flask import Flask, request, jsonify, render_template
 
-print("[STARTUP] Starting Flask app initialization...", file=sys.stderr)
-print("[STARTUP] Python version:", sys.version, file=sys.stderr)
-print("[STARTUP] Working directory:", os.getcwd(), file=sys.stderr)
+print("[STARTUP] Starting Flask app initialization...", flush=True)
+print("[STARTUP] Python version:", sys.version, flush=True)
+print("[STARTUP] Working directory:", os.getcwd(), flush=True)
 
 app = Flask(__name__)
 
@@ -23,12 +23,12 @@ DATABASE_DIR = os.path.join(os.path.dirname(__file__), 'data')
 os.makedirs(DATABASE_DIR, exist_ok=True)
 
 DATABASE = os.path.join(DATABASE_DIR, 'projects.db')
-print(f"[STARTUP] Database location: {DATABASE}", file=sys.stderr)
+print(f"[STARTUP] Database location: {DATABASE}", flush=True)
 
 with app.app_context():
     def init_db():
         try:
-            print("[STARTUP] Initializing database...", file=sys.stderr)
+            print("[STARTUP] Initializing database...", flush=True)
             conn = sqlite3.connect(DATABASE)
             cursor = conn.cursor()
             cursor.execute('''
@@ -52,14 +52,14 @@ with app.app_context():
             ''')
             conn.commit()
             conn.close()
-            print("[STARTUP] ✓ Database initialized successfully", file=sys.stderr)
+            print("[STARTUP] OK Database initialized successfully", flush=True)
         except sqlite3.Error as e:
-            print(f"[STARTUP] ✗ Database initialization error: {e}", file=sys.stderr)
-            print("[STARTUP] Application will continue but database operations may fail", file=sys.stderr)
+            print(f"[STARTUP] ERROR Database initialization error: {e}", flush=True)
+            print("[STARTUP] Application will continue but database operations may fail", flush=True)
     
     init_db()
 
-print("[STARTUP] ✓ Flask app initialized successfully", file=sys.stderr)
+print("[STARTUP] OK Flask app initialized successfully", flush=True)
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -477,3 +477,4 @@ if __name__ == '__main__':
     except ValueError:
         port = 5000
     app.run(host='0.0.0.0', port=port, debug=False)
+
