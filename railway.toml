@@ -2,7 +2,8 @@
 builder = "DOCKERFILE"
 
 [deploy]
-restartPolicyType = "ON_FAILURE"
+startCommand = "gunicorn -c gunicorn.conf.py app:app"
+restartPolicyType = "ALWAYS"
 
 [deploy.env]
 PORT = "8080"
