@@ -11,6 +11,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
+    nginx \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -27,8 +28,10 @@ COPY templates ./templates
 COPY configs ./configs
 COPY docker-entrypoint.sh ./
 
-# Create data directory
-RUN mkdir -p /app/data /app/logs
+# Create required directories and remove default nginx site
+RUN mkdir -p /app/data /app/logs \
+    && rm -f /etc/nginx/sites-enabled/default \
+    && rm -f /etc/nginx/conf.d/default.conf
 
 # Make entrypoint executable
 RUN chmod +x /app/docker-entrypoint.sh
