@@ -13,35 +13,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies with verbose output
-RUN pip install --upgrade pip setuptools && \
-    pip install -r requirements.txt && \
-    python -c "import psutil; print('✓ psutil installed')" || echo "Warning: psutil not found"
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy application
 COPY app.py gunicorn.conf.py ./
-COPY entrypoint.sh ./
 COPY templates ./templates
 COPY configs ./configs
 
-# Make entrypoint executable
-RUN chmod +x /app/entrypoint.sh
+# Create data directory
+RUN mkdir -p /app/data /app/logs
 
-# Create data directory for database
-RUN mkdir -p /app/data /app/logs && \
-    chmod 755 /app/data /app/logs
-
-# Expose port (Railway will map to external port)
+# EXPOSE port
 EXPOSE 8080
 
-# Health check with longer startup time for Railway
-HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
-    CMD curl -f http://localhost:${PORT:-8080}/api/health || exit 1
-
-# Run entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Start gunicorn with config file
+# Health check removed temporarily for debugging
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]

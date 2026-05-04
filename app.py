@@ -7,9 +7,14 @@ Flask-based REST API for project and task management
 import os
 import sqlite3
 import psutil
+import sys
 from datetime import datetime
 from functools import wraps
 from flask import Flask, request, jsonify, render_template
+
+print("[STARTUP] Starting Flask app initialization...", file=sys.stderr)
+print("[STARTUP] Python version:", sys.version, file=sys.stderr)
+print("[STARTUP] Working directory:", os.getcwd(), file=sys.stderr)
 
 app = Flask(__name__)
 
@@ -18,10 +23,12 @@ DATABASE_DIR = os.path.join(os.path.dirname(__file__), 'data')
 os.makedirs(DATABASE_DIR, exist_ok=True)
 
 DATABASE = os.path.join(DATABASE_DIR, 'projects.db')
+print(f"[STARTUP] Database location: {DATABASE}", file=sys.stderr)
 
 with app.app_context():
     def init_db():
         try:
+            print("[STARTUP] Initializing database...", file=sys.stderr)
             conn = sqlite3.connect(DATABASE)
             cursor = conn.cursor()
             cursor.execute('''
@@ -45,11 +52,14 @@ with app.app_context():
             ''')
             conn.commit()
             conn.close()
+            print("[STARTUP] ✓ Database initialized successfully", file=sys.stderr)
         except sqlite3.Error as e:
-            print(f"[WARNING] Database initialization error: {e}")
-            print("[WARNING] Application will continue but database operations may fail")
+            print(f"[STARTUP] ✗ Database initialization error: {e}", file=sys.stderr)
+            print("[STARTUP] Application will continue but database operations may fail", file=sys.stderr)
     
     init_db()
+
+print("[STARTUP] ✓ Flask app initialized successfully", file=sys.stderr)
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
