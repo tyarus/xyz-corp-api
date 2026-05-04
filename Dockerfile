@@ -3,8 +3,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PORT=8080
+    PIP_NO_CACHE_DIR=1
 
 # Set working directory
 WORKDIR /app
@@ -26,27 +25,23 @@ RUN pip install --upgrade pip setuptools && \
 
 # Copy application files
 COPY app.py gunicorn.conf.py ./
+COPY entrypoint.sh ./
 COPY templates ./templates
 COPY configs ./configs
 
-# Create necessary directories with proper permissions
-RUN mkdir -p /app/logs /app/data && \
-    chmod -R 755 /app/logs /app/data
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
 
-# Expose dynamic port (Railway will override)
+# Create data directory for database
+RUN mkdir -p /app/data /app/logs && \
+    chmod 755 /app/data /app/logs
+
+# Expose port (Railway will map to external port)
 EXPOSE 8080
 
 # Health check with longer startup time for Railway
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
     CMD curl -f http://localhost:${PORT:-8080}/api/health || exit 1
 
-# Run application with explicit port binding
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:${PORT:-8080}", \
-     "--workers", "${GUNICORN_WORKERS:-4}", \
-     "--worker-class", "sync", \
-     "--timeout", "${GUNICORN_TIMEOUT:-120}", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "${GUNICORN_LOG_LEVEL:-info}", \
-     "app:app"]
+# Run entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
