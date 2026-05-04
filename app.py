@@ -12,33 +12,43 @@ from functools import wraps
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
-DATABASE = os.path.join(os.path.dirname(__file__), 'projects.db')
+
+# Ensure database directory exists
+DATABASE_DIR = os.path.join(os.path.dirname(__file__), 'data')
+os.makedirs(DATABASE_DIR, exist_ok=True)
+
+DATABASE = os.path.join(DATABASE_DIR, 'projects.db')
 
 with app.app_context():
     def init_db():
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                status TEXT NOT NULL CHECK(status IN ('todo', 'in-progress', 'done')),
-                assigned_to TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-            )
-        ''')
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(DATABASE)
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS projects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('todo', 'in-progress', 'done')),
+                    assigned_to TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            ''')
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(f"[WARNING] Database initialization error: {e}")
+            print("[WARNING] Application will continue but database operations may fail")
+    
     init_db()
 
 def get_db():
