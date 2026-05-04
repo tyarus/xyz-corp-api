@@ -5,6 +5,10 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "restartPolicyType": "ALWAYS"
+    "restartPolicyType": "ALWAYS",
+    "env": {
+      "PORT": "8080",
+      "PYTHONUNBUFFERED": "1"
+    }
   }
 }

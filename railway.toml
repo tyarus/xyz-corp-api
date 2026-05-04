@@ -3,3 +3,7 @@ builder = "DOCKERFILE"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
+
+[deploy.env]
+PORT = "8080"
+PYTHONUNBUFFERED = "1"

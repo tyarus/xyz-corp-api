@@ -25,13 +25,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py gunicorn.conf.py ./
 COPY templates ./templates
 COPY configs ./configs
+COPY docker-entrypoint.sh ./
 
 # Create data directory
 RUN mkdir -p /app/data /app/logs
 
+# Make entrypoint executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 # EXPOSE port
 EXPOSE 8080
 
-# Start gunicorn with config file
-# Health check removed temporarily for debugging
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
+# Set PORT to default (Railway will override)
+ENV PORT=8080
+
+# Use entrypoint script to ensure PORT is set
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
